@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/marselnenaj/omarchy-yubikey",
+  "ref": "v0.1.0-preview.1",
+  "sourceDirectory": "plugins/yubikey.lock",
+  "sha256": {
+    "manifest.json": "3fd064955b6b9ffe17b17aa76f33fe7647e3023a607466a7016c003df59d6a5e",
+    "Service.qml": "21030261ff7fa1da15f3d78664611fea500f551b06baf6e302365b3d4ae99424",
+    "LockView.qml": "8db268649bbdce48c0a10974395d8d14b0f50fa1673e3b99be2a3c6cc09dd8ca"
+  }
+}
