@@ -10,6 +10,8 @@ import qs.Commons as Commons
 Item {
   id: root
 
+  Translations { id: strings }
+
   property var shell: null
   property string omarchyPath: ""
 
@@ -28,7 +30,7 @@ Item {
   // password service; timeout/error never selects another method.
   property string authMethod: "password"
   readonly property bool keyResponseRequired: authMethod === "key" && fido2Pam.active && fido2Pam.responseRequired
-  readonly property string inputPrompt: authMethod === "key" ? (keyResponseRequired ? fido2Pam.message : "Touch your key") : (authMethod === "fingerprint" ? "Touch fingerprint reader" : "Enter password")
+  readonly property string inputPrompt: authMethod === "key" ? (keyResponseRequired ? fido2Pam.message : strings.t("Touch your security key")) : (authMethod === "fingerprint" ? strings.t("Touch the fingerprint reader") : strings.t("Enter password"))
   property bool fido2Authenticating: false
   property bool fido2Configured: false
   property bool fido2StatusKnown: false
@@ -47,9 +49,8 @@ Item {
 
   readonly property bool locked: lockRequested || sessionLock.locked || sessionLock.secure
 
-  // Decisions read the lock state afresh. A property binding that missed a change
-  // notification once reported locked after an unlock, and a lock request before
-  // suspend then took that for done and never locked the session.
+  // Read the current lock state for each decision. A stale property binding
+  // can report an unlocked session as locked and skip a lock before suspend.
   function currentlyLocked() {
     return lockRequested || sessionLock.locked || sessionLock.secure
   }
@@ -103,7 +104,7 @@ Item {
   function checkStrandedLock() {
     if (strandedLockResolved || strandedLockCheckProc.running) return
 
-    // A lock this shell took is nobody's orphan.
+    // A lock acquired by this shell does not require orphan recovery.
     if (currentlyLocked()) {
       strandedLockResolved = true
       return
@@ -306,7 +307,7 @@ Item {
     enteredPassword = ""
     pendingPassword = ""
     failedAttempts += 1
-    failureMessage = "Authentication failed (" + failedAttempts + ")"
+    failureMessage = "Authentication failed (%1)"
     runWake()
   }
 
@@ -338,7 +339,7 @@ Item {
     fido2Authenticating = true
     if (!fido2Pam.start()) {
       fido2Authenticating = false
-      failureMessage = "Key unavailable — retry or use password"
+      failureMessage = "Security key unavailable — retry or use password"
     }
   }
 
@@ -351,7 +352,7 @@ Item {
       logEvent("unlock: fido2")
       finishUnlock()
     } else {
-      failureMessage = "Key authentication failed — retry or use password"
+      failureMessage = "Security key authentication failed — retry or use password"
     }
   }
 
@@ -561,7 +562,7 @@ Item {
     // $PPID is this shell: a crash re-execs in place, so its pid is the one to skip.
     command: ["bash", "-c", "omarchy-hyprland-session-lock-stranded \"$PPID\""]
     onExited: function(exitCode) {
-      // No output to read the lock off yet.
+      // Lock state cannot be queried until an output is available.
       if (exitCode === 2) return
 
       root.strandedLockResolved = true
@@ -663,8 +664,8 @@ Item {
     onFileChanged: reload()
   }
 
-  // No lock before PAM is known good. An answer from before then may be stale --
-  // the failsafe can be cleared from a TTY -- so re-ask rather than act on it.
+  // Wait for PAM validation before locking. Refresh the lock state afterward,
+  // since the compositor failsafe may have been cleared from a TTY meanwhile.
   onPasswordPamConfiguredChanged: {
     if (!passwordPamConfigured) return
 
